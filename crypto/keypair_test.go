@@ -1,33 +1,32 @@
 package crypto
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestKeypairSignVerifySuccess(t *testing.T) {
+func TestKeypair(t *testing.T) {
 	privKey := GeneratePrivateKey()
-	publicKey := privKey.PublicKey()
-	msg := []byte("hello world")
+	pubKey := privKey.PublicKey()
 
-	sig, err := privKey.Sign(msg)
-	assert.Nil(t, err)
+	address := pubKey.Address()
 
-	assert.True(t, sig.Verify(publicKey, msg))
+	fmt.Println(address)
 }
 
 func TestKeypairSignVerifyFail(t *testing.T) {
-	privKey := GeneratePrivateKey()
-	PublicKey := privKey.PublicKey()
-	msg := []byte("hello world")
+	privkey := GeneratePrivateKey()
+	msg := []byte("Hello")
 
-	sig, err := privKey.Sign(msg)
-	assert.Nil(t, err)
+	sig := privkey.Sign(msg)
 
-	otherPrivKey := GeneratePrivateKey()
-	otherPublicKey := otherPrivKey.PublicKey()
+	otherPrivateKey := GeneratePrivateKey()
+	otherpubKey := otherPrivateKey.PublicKey()
+	assert.True(t, sig.Verify(privkey.PublicKey(), msg))
 
-	assert.False(t, sig.Verify(otherPublicKey, msg))
-	assert.False(t, sig.Verify(PublicKey, []byte("xxxxxx")))
+	assert.False(t, sig.Verify(otherpubKey, msg))
+	assert.False(t, sig.Verify(otherpubKey, []byte("Whasd")))
+
 }

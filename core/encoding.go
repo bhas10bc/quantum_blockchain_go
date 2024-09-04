@@ -1,9 +1,10 @@
 package core
 
 import (
-	"crypto/elliptic"
 	"encoding/gob"
 	"io"
+
+	"github.com/cloudflare/circl/sign/dilithium"
 )
 
 type Encoder[T any] interface {
@@ -18,11 +19,23 @@ type GobTxEncoder struct {
 	w io.Writer
 }
 
-func NewGobTxEncoder(w io.Writer) *GobTxEncoder{
-	gob.Register(elliptic.P256())
-	return &GobTxEncoder{
-		w :w,
+func init() {
+
+	mode := dilithium.Mode3
+
+	// Register the public and private key types by creating sample instances
+	_, privKey, err := mode.GenerateKey(nil)
+	if err != nil {
+		panic(err)
 	}
+	pubKey := privKey.Public() // Get public key from private key
+
+	gob.Register(privKey)
+	gob.Register(pubKey)
+}
+
+func NewGobTxEncoder(w io.Writer) *GobTxEncoder {
+	return &GobTxEncoder{w: w}
 }
 
 func (e *GobTxEncoder) Encode(tx *Transaction) error {
@@ -33,11 +46,8 @@ type GobTxDecoder struct {
 	r io.Reader
 }
 
-func NewGobTxDecoder(r io.Reader) *GobTxDecoder{
-	gob.Register(elliptic.P256())
-	return &GobTxDecoder{
-		r :r,
-	}
+func NewGobTxDecoder(r io.Reader) *GobTxDecoder {
+	return &GobTxDecoder{r: r}
 }
 
 func (e *GobTxDecoder) Decode(tx *Transaction) error {

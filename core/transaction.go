@@ -32,10 +32,8 @@ func (tx *Transaction) Hash(hasher Hasher[*Transaction]) types.Hash {
 }
 
 func (tx *Transaction) Sign(privKey crypto.PrivateKey) error {
-	sig, err := privKey.Sign(tx.Data)
-	if err != nil {
-		return err
-	}
+	sig := privKey.Sign(tx.Data)
+	
 
 	tx.From = privKey.PublicKey()
 	tx.Signature = sig
