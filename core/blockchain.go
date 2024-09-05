@@ -8,18 +8,18 @@ import (
 )
 
 type Blockchain struct {
-	logger log.Logger
+	logger    log.Logger
 	store     Storage
 	lock      sync.RWMutex
 	headers   []*Header
 	validator Validator
 }
 
-func NewBlockchain(l log.Logger ,genesis *Block) (*Blockchain, error) {
+func NewBlockchain(l log.Logger, genesis *Block) (*Blockchain, error) {
 	bc := &Blockchain{
 		headers: []*Header{},
 		store:   NewMemorystore(),
-		logger: l,
+		logger:  l,
 	}
 	bc.validator = NewBlockValidator(bc)
 	err := bc.addBlockWithoutValidation(genesis)
@@ -34,6 +34,17 @@ func (bc *Blockchain) SetValidator(v Validator) {
 func (bc *Blockchain) AddBlock(b *Block) error {
 	if err := bc.validator.ValidateBlock(b); err != nil {
 		return err
+	}
+
+	for _, tx := range b.Transactions {
+		bc.logger.Log("msg", "executing code", "len", len(tx.Data), "hash", tx.Hash(&TxHasher{}))
+
+		vm := NewVM(tx.Data)
+		if err := vm.Run(); err != nil {
+			return err
+		}
+
+		bc.logger.Log("vm result", vm.stack.data[vm.stack.sp])
 	}
 
 	return bc.addBlockWithoutValidation(b)
@@ -68,12 +79,12 @@ func (bc *Blockchain) addBlockWithoutValidation(b *Block) error {
 	bc.headers = append(bc.headers, b.Header)
 	bc.lock.Unlock()
 
-	
-		bc.logger.Log(
-		  "msg", "new block",
-		 "hash",b.Hash(BlockHasher{}),
-		 "height", b.Height,
-		 "transactions", len(b.Transactions),
-		)
+	bc.logger.Log(
+		"msg", "new block",
+		"hash", b.Hash(BlockHasher{}),
+		"height", b.Height,
+		"transactions", len(b.Transactions),
+	)
+
 	return bc.store.Put(b)
 }
