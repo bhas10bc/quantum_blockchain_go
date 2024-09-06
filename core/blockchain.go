@@ -16,13 +16,17 @@ type Blockchain struct {
 }
 
 func NewBlockchain(l log.Logger ,genesis *Block) (*Blockchain, error) {
+	cbStore, err := NewCouchDBStore("localhost:5984","blockchain","admin","admin")
+	if err != nil {
+		return nil, err
+	}
 	bc := &Blockchain{
 		headers: []*Header{},
-		store:   NewMemorystore(),
+		store:   cbStore,
 		logger: l,
 	}
 	bc.validator = NewBlockValidator(bc)
-	err := bc.addBlockWithoutValidation(genesis)
+	err = bc.addBlockWithoutValidation(genesis)
 
 	return bc, err
 }
