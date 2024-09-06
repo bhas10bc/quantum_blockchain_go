@@ -1,16 +1,45 @@
 package core
 
 import (
+	"encoding/gob"
 	"fmt"
+	"math/rand"
 
 	"y/crypto"
 	"y/types"
 )
 
+type TxType byte
+
+const (
+	TxTypeCollection TxType = iota // 0x0
+	TxTypeMint                     // 0x01
+)
+
+type CollectionTx struct {
+	Fee      int64
+	MetaData []byte
+}
+
+type MintTx struct {
+	Fee             int64
+	NFT             types.Hash
+	Collection      types.Hash
+	MetaData        []byte
+	CollectionOwner crypto.PublicKey
+	Signature       crypto.Signature
+}
+
 type Transaction struct {
+	// Only used for native NFT logic
+	TxInner any
+	// Any arbitrary data for the VM
 	Data      []byte
+	To        crypto.PublicKey
+	Value     uint64
 	From      crypto.PublicKey
 	Signature *crypto.Signature
+	Nonce     int64
 
 	// cached version of the tx data hash
 	hash types.Hash
@@ -18,7 +47,8 @@ type Transaction struct {
 
 func NewTransaction(data []byte) *Transaction {
 	return &Transaction{
-		Data: data,
+		Data:  data,
+		Nonce: rand.Int63n(1000000000000000),
 	}
 }
 
@@ -30,8 +60,11 @@ func (tx *Transaction) Hash(hasher Hasher[*Transaction]) types.Hash {
 }
 
 func (tx *Transaction) Sign(privKey crypto.PrivateKey) error {
-	sig := privKey.Sign(tx.Data)
-
+	hash := tx.Hash(TxHasher{})
+	sig, err := privKey.Sign(hash.ToSlice())
+	if err != nil {
+		return err
+	}
 
 	tx.From = privKey.PublicKey()
 	tx.Signature = sig
@@ -44,7 +77,8 @@ func (tx *Transaction) Verify() error {
 		return fmt.Errorf("transaction has no signature")
 	}
 
-	if !tx.Signature.Verify(tx.From, tx.Data) {
+	hash := tx.Hash(TxHasher{})
+	if !tx.Signature.Verify(tx.From, hash.ToSlice()) {
 		return fmt.Errorf("invalid transaction signature")
 	}
 
@@ -57,4 +91,9 @@ func (tx *Transaction) Decode(dec Decoder[*Transaction]) error {
 
 func (tx *Transaction) Encode(enc Encoder[*Transaction]) error {
 	return enc.Encode(tx)
+}
+
+func init() {
+	gob.Register(CollectionTx{})
+	gob.Register(MintTx{})
 }

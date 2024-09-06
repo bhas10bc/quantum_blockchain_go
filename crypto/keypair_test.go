@@ -11,16 +11,17 @@ func TestKeypair(t *testing.T) {
 	privKey := GeneratePrivateKey()
 	pubKey := privKey.PublicKey()
 
-	address := pubKey.Address()
+	// address := pubKey.Address()
 
-	fmt.Println(address)
+	fmt.Println(pubKey)
 }
 
 func TestKeypairSignVerifyFail(t *testing.T) {
 	privkey := GeneratePrivateKey()
 	msg := []byte("Hello")
 
-	sig := privkey.Sign(msg)
+	sig,err := privkey.Sign(msg)
+	assert.Nil(t,err)
 
 	otherPrivateKey := GeneratePrivateKey()
 	otherpubKey := otherPrivateKey.PublicKey()

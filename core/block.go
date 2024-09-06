@@ -29,6 +29,7 @@ func (h *Header) Bytes() []byte {
 
 type Block struct {
 	*Header
+
 	Transactions []*Transaction
 	Validator    crypto.PublicKey
 	Signature    *crypto.Signature
@@ -63,11 +64,15 @@ func NewBlockFromPrevHeader(prevHeader *Header, txx []*Transaction) (*Block, err
 
 func (b *Block) AddTransaction(tx *Transaction) {
 	b.Transactions = append(b.Transactions, tx)
+	hash, _ := CalculateDataHash(b.Transactions)
+	b.DataHash = hash
 }
 
 func (b *Block) Sign(privKey crypto.PrivateKey) error {
-	sig := privKey.Sign(b.Header.Bytes())
-	
+	sig, err := privKey.Sign(b.Header.Bytes())
+	if err != nil {
+		return err
+	}
 
 	b.Validator = privKey.PublicKey()
 	b.Signature = sig
@@ -94,6 +99,7 @@ func (b *Block) Verify() error {
 	if err != nil {
 		return err
 	}
+
 	if dataHash != b.DataHash {
 		return fmt.Errorf("block (%s) has an invalid data hash", b.Hash(BlockHasher{}))
 	}
